@@ -18,6 +18,7 @@ repositories {
 }
 
 ext {
+	set('otelVersion', "1.33.3")
 	set('springCloudVersion', "2024.0.1")
 	set('testcontainersVersion', '1.19.8')
 }
@@ -29,6 +30,11 @@ dependencies {
 	implementation 'org.springframework.session:spring-session-data-redis'
 	implementation 'org.springframework.cloud:spring-cloud-starter-config'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+	runtimeOnly 'io.github.resilience4j:resilience4j-micrometer'
+	runtimeOnly "io.opentelemetry.javaagent:opentelemetry-javaagent:${otelVersion}"
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'
@@ -46,6 +52,7 @@ dependencyManagement {
 }
 
 bootBuildImage { // 빌드 팩을 이용해 이미지를 빌드하기 위한 작업 (패키토 사용)
+	builder = "docker.io/paketobuildpacks/builder-jammy-base"
 	imageName = "${project.name}" // 버전 지정 안하면 latest로 된다
 	environment = ["BP_JVM_VERSION" : "21.*"] // 이미지에 설치할 JVM 버전
 

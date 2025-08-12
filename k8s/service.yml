@@ -15,4 +15,5 @@ spec:
       targetPort: 9000 # 서비스의 대상이 되는 파드가 노출할 포트
 
 
-# 이 서비스를 외부에 노출하기 위해서는 kubectl port-forward service/catalog-service 9001:80 으로 포트 포워딩 해야 함!
+# 위의 설정 정보는 클러스 내부 전용 바인딩이다.
+# 따라서 이 서비스를 외부에 노출하기 위해서는 kubectl port-forward service/catalog-service 9000:80 으로 포트 포워딩 해야 함!

@@ -13,6 +13,17 @@ spring:
     timeout-per-shutdown-phase: 15s # 우아한 종료 기간을 15초로 설정
   config:
     import: "optional:configserver:"
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak: # 스프링 세큐리티에서 클라이언트 등록을 식별하는 id 아무값이나 사용 가능 (registration id)
+            client-id: edge-service
+            client-secret: polar-keycloak-secret
+            scope: openid, roles # 클라이언트가 접근 권한을 갖기 원하는 영역의 목록, openid 영역은 OAuth2에서 OIDC 인증 수행
+        provider:
+          keycloak: # registration의 keycloak과 동일한 이름
+            issuer-uri: http://localhost:8080/realms/PolarBookshop # keycloak uri
   cloud:
     config:
       uri: http://localhost:8888
@@ -29,7 +40,7 @@ spring:
         - id: catalog-route
           uri: ${CATALOG_SERVICE_URL:http://localhost:9001}/books
           predicates:
-          - Path=/books/**
+          - Path=/books/** # books/**로 요청이 오면 위 uri로 요청을 보냄
           filters:
             - name: CircuitBreaker
               args:
@@ -43,6 +54,10 @@ spring:
             - name: CircuitBreaker
               args: # 서킷브레이커에 정의한 폴백이 없음
                 name: orderCircuitBreaker
+        - id: spa-route
+          uri: ${SPA_URL:http://localhost:9004}
+          predicates:
+              - Path=/,/*.css,/*.js,/favicon.ico
       httpclient: # http 클라이언트에 대한 설정
         connect-timeout: 2000 # 연결 수립까지 타임아웃 (ms)
         response-timeout: 5s # 응답 받을때 까지 타임아웃 시간
@@ -52,6 +67,7 @@ spring:
           max-life-time: 60s # 통신 채널이 열려있는 기간
       default-filters:
         - SaveSession # 요청을 서비스로 전달하기전에 세션 데이터 저장
+        - TokenRelay # 다른 서비스를 호출 할 때 엑세스 토큰 전달 활성화
         - name: Retry
           args:
             retries: 5
@@ -65,7 +81,7 @@ spring:
               basedOnPreviousValue: false
         - name: RequestRateLimiter
           args:
-            redis-rate-limiter:
+            redis-rate-limiter: # 사용자를 구분하여 요청 제한 (KeyResolver에 의해 사용자 구분)
               replenishRate: 10 # 초당 버킷에 떨어지는 토큰의 수
               burstCapacity: 20 # 최대 20개 요청까지 허용
               requestedTokens: 1 # 하나의 요청에 몇 개의 토큰이 사용되는지 지정
@@ -94,7 +110,22 @@ resilience4j:
       default: # 모든 시간 제한에 대한 기본 설정 (가장 우선순위가 높다. ex - httpclient.response-timeout)
         timeoutDuration: 5s
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health # /actuator/health 엔드포인트를 노출한다.
+  endpoint:
+    health:
+      show-details: always # 상세정보 제공
+      show-components: always # 구성요소 정보 제공
+      probes:
+        enabled: true # 활성 및 준비 상태 프로브 지원 활성화
 
 logging:
+  group:
+    circuitbreaker: io.github.resilience4j, org.springframework.cloud.circuitbreaker
   level:
-    io.github.resilience4j: DEBUG
+    circuitbreaker: info
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
