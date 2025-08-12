@@ -123,9 +123,9 @@ management:
         enabled: true # 활성 및 준비 상태 프로브 지원 활성화
 
 logging:
-  group:
+  group: # 로깅 그룹 지정
     circuitbreaker: io.github.resilience4j, org.springframework.cloud.circuitbreaker
-  level:
+  level: # 로깅 그룹의 디버깅 레벨 설정
     circuitbreaker: info
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
