@@ -68,10 +68,16 @@ spring:
       default-filters:
         - SaveSession # 요청을 서비스로 전달하기전에 세션 데이터 저장
         - TokenRelay # 다른 서비스를 호출 할 때 엑세스 토큰 전달 활성화
+        - name: RequestRateLimiter # 이 필터가 Retry 보다 앞에 와야한다 (아니면 XRate-limit 중복으로 헤더에 추가)
+          args:
+            redis-rate-limiter: # 사용자를 구분하여 요청 제한 (KeyResolver에 의해 사용자 구분)
+              replenishRate: 10 # 초당 버킷에 떨어지는 토큰의 수
+              burstCapacity: 20 # 최대 20개 요청까지 허용
+              requestedTokens: 1 # 하나의 요청에 몇 개의 토큰이 사용되는지 지정
         - name: Retry
           args:
             retries: 5
-            methods: GET # GET 요청만 재시도 (세션에 저장하고 이거 때문에 헤더에 계속 추가됨)
+            methods: GET # GET 요청만 재시도
             series: SERVER_ERROR # 500번대 오류만 재시도
             exceptions: java.io.IOException, java.util.concurrent.TimeoutException
             backoff: # 재시도는 firstBackOff * (factor^n)으로 계산
@@ -79,12 +85,6 @@ spring:
               maxBackoff: 500ms
               factor: 2
               basedOnPreviousValue: false
-        - name: RequestRateLimiter
-          args:
-            redis-rate-limiter: # 사용자를 구분하여 요청 제한 (KeyResolver에 의해 사용자 구분)
-              replenishRate: 10 # 초당 버킷에 떨어지는 토큰의 수
-              burstCapacity: 20 # 최대 20개 요청까지 허용
-              requestedTokens: 1 # 하나의 요청에 몇 개의 토큰이 사용되는지 지정
   data:
     redis:
       connect-timeout: 2s
